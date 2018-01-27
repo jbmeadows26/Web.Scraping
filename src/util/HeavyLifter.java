@@ -20,7 +20,6 @@ public class HeavyLifter {
     protected Connection connection;
 
     public HeavyLifter(String url) {
-    crawl(url);
     }
 
     protected boolean crawl(String url) // Give it a URL and it makes an HTTP request for a web page
@@ -35,7 +34,7 @@ public class HeavyLifter {
             // 200 is the HTTP OK status code
             // indicating that everything is great.
             {
-                System.out.println("\n**Visiting** Received web page at " + url);
+              //  System.out.println("\n**Visiting** Received web page at " + url);
             }
             if (!connection.response().contentType().contains("text/html")) {
                 System.out.println("**Failure** Retrieved something other than HTML");

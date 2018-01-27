@@ -16,12 +16,20 @@ public class MailCrawler extends HeavyLifter {
 
     private Set<String> links;
     private String url;
-    private String course;
+    private String siteName;
+
+    @Override
+    public boolean crawl(String url) { //every time you crawl, update link set
+        boolean b = super.crawl(url);
+        if (b) {
+            links = linkStringSet(htmlDocument);
+        }
+        return b;
+    }
 
     public static void main(String[] args) {
-        MailCrawler m = new MailCrawler("http://www.math.ubc.ca/~marcus/Math227/", "MATH227");
-        //   m.crawl("http://www.math.ubc.ca/~marcus/Math227/");
-        //    m.checkIfLinksChanged();
+        MailCrawler m =
+                new MailCrawler("[siteurl]", "[sitename]");
         Timer t = new Timer();
 
         t.scheduleAtFixedRate(
@@ -33,19 +41,24 @@ public class MailCrawler extends HeavyLifter {
                     }
                 },
                 0,      // run first occurrence immediately
-                2000); // run every two seconds
+                2000); // run every half hour (2000 = 2 sec)
     }
 
 
-    public MailCrawler(String url, String course) {
-        super(url);
+    public MailCrawler(String url, String siteName) {
+        super(url); //does nothing
+        crawl(url);
         if (htmlDocument != null) {
         //    Elements elements = htmlDocument.select("a[href]");
             links = linkStringSet(htmlDocument);
-            this.course = course;
+            this.siteName = siteName;
             this.url = url;
             }
         }
+
+    public String getURL() {
+        return this.url;
+    }
 
 
 
@@ -68,16 +81,16 @@ public class MailCrawler extends HeavyLifter {
             Session session = Session.getDefaultInstance(props,
                     new javax.mail.Authenticator() {
                         protected PasswordAuthentication getPasswordAuthentication() {
-                            return new PasswordAuthentication("annemariehemlock","thisaccountisfake");
+                            return new PasswordAuthentication("[youremail]","[yourpassword]");
                         }
                     });
 
             try {
 
                 Message message = new MimeMessage(session);
-                message.setFrom(new InternetAddress("annemariehemlock@gmail.com"));
+                message.setFrom(new InternetAddress("[youremail]@gmail.com"));
                 message.setRecipients(Message.RecipientType.TO,
-                        InternetAddress.parse("lena.podina@gmail.com"));
+                        InternetAddress.parse("[destemail]@gmail.com"));
                 message.setSubject(subj);
                 message.setText(msg);
 
@@ -91,31 +104,105 @@ public class MailCrawler extends HeavyLifter {
         }
 
     /**
-     * Check if the links on MATH 227 site have changed (if more links have been added).
+     * Check if the links on MATH 227 site have changed (if more links have been added). Prints response.
      */
-    private void checkIfLinksChanged() {
-        Set<String> newLinks;
-        Set<String> removedLinks = new HashSet<>();
+    public void checkIfLinksChanged() {
+
+    //  THIS may WORK
+
+/*
+        String oldBody = htmlDocument.html();
+        crawl(url); //updates links field
+        String newBody = htmlDocument.html();
+
+        String diff1 = StringUtils.difference(oldBody, newBody); //remainder of newBody where it starts to differ
+        // from oldBody
+        String rDiff1 = StringUtils.reverse(diff1);
+        String reverseOld = StringUtils.reverse(oldBody);
+        String rDiff2 = StringUtils.difference(reverseOld, rDiff1);
+
+        String diff2 = StringUtils.reverse(rDiff2); //interval of difference
+
+
+        System.out.println(diff2);
+
+            if (oldBody.equals(newBody)) {
+                //System.out.println("\n no change");
+            }
+            else {System.out.println("\n change detected");
+                String subj1 = siteName + ": changes noted";
+                String intro = "Hi," + "\n\nThis is your bot. There's been some changes on " + url;
+                sendMail(subj1, intro);}
+
+*/
+
+            /*
+        Elements linksBefore = htmlDocument.select("a[href]");
+        crawl(url); //updates links field
+        Elements linksAfter = htmlDocument.select("a[href]");
+
+        Set<Element> setLinksBefore = new HashSet<>(linksBefore);
+        Set<Element> setLinksAfter = new HashSet<>(linksAfter);
+
+        Set<Element> addedLinks = new HashSet<>();
+        Set<Element> removedLinks = new HashSet<>();
+
+
+        for (Element beforeLink : setLinksBefore) {
+            for (Element afterLink : setLinksAfter) {
+                if (beforeLink.isEqualNode(afterLink)) {
+
+                }
+            }
+        }
+
+        for (Element each : setLinksAfter) {
+            if (!setLinksBefore.contains(each)) {
+                addedLinks.add(each);
+            }
+        }
+        if (addedLinks.isEmpty() && removedLinks.isEmpty()) {
+            System.out.println("\n no change");
+        }
+        else {System.out.println("\n change detected");}*/
+
+
+//         THIS WORKS
+
+
+
         Set<String> addedLinks = new HashSet<>();
+        Set<String> removedLinks = new HashSet<>();
 
-            crawl(url);
-            newLinks = linkStringSet(htmlDocument);
-
+            Set<String> oldLinks = linkStringSet(htmlDocument);
+            crawl(url); //updates links field
+            Set<String> newLinks = linkStringSet(htmlDocument);
 
             for (String newLink : newLinks) {
-                if (!links.contains(newLinks)) {
+                if (!oldLinks.contains(newLink)) {
                     addedLinks.add(newLink);
                 }
             }
-            for (String link : links) {
+            for (String link : oldLinks) {
                 if (!newLinks.contains(link)) {
                     removedLinks.add(link);
                 }
             }
 
-            if (!removedLinks.isEmpty() && !addedLinks.isEmpty()) {
+            if (!removedLinks.isEmpty() || !addedLinks.isEmpty()) {
+              //  System.out.println("A change was detected");
                 notifyOfLinkChange(removedLinks, addedLinks);
+              //  System.out.println("An email was sent");
             }
+
+
+
+      /*  System.out.println("removed:");
+        System.out.println(removedLinks);
+        System.out.println("added:");
+        System.out.println(addedLinks); */
+
+     //   System.out.println(links);
 
     }
 
@@ -123,7 +210,7 @@ public class MailCrawler extends HeavyLifter {
         Set<String> stringSet = new HashSet<>();
         Elements linksOnPage = htmlDocument.select("a[href]");
         for (Element each : linksOnPage) {
-            String temp = each.text();
+            String temp = each.attr("href");
             stringSet.add(temp);
             }
         return stringSet;
@@ -131,10 +218,9 @@ public class MailCrawler extends HeavyLifter {
 
     private void notifyOfLinkChange(Set<String> removed, Set<String> added) {
         assert (!(removed.isEmpty() && added.isEmpty()));
-        String subj1 = course + ": Link";
+        String subj1 = siteName + ": Link";
         String subj2 = "";
-        String intro = "Hi," + "\n\n This is your bot. There's been some link changes on the " +
-         "site" + url;
+        String intro = "Hi," + "\n\nThis is your bot. There's been some link changes on " + url;
         String body = "";
         String addedString = "";
         for (String string : added) {
@@ -147,12 +233,12 @@ public class MailCrawler extends HeavyLifter {
 
             if (!added.isEmpty()) {
                 subj2 += " [addition]";
-                body += "The following links were added: " + addedString;
+                body += "\n\nThe following links were added: " + addedString;
 
             }
             if (!removed.isEmpty()) {
                 subj2 += " [removal]";
-                body += "The following links were removed: " + removedString;
+                body += "\n\nThe following links were removed: " + removedString;
             }
 
         String subj = subj1 + subj2;

@@ -18,5 +18,7 @@
     </orderEntry>
     <orderEntry type="library" name="javaee" level="project" />
     <orderEntry type="library" name="mail" level="project" />
+    <orderEntry type="library" name="commons-lang3-3.7" level="project" />
+    <orderEntry type="library" name="android-21" level="project" />
   </component>
 </module>
